@@ -107,6 +107,8 @@ export default function VisualizePage() {
     setEdges(filteredEdges as any[])
   }, [arch, setNodes, setEdges])
 
+  const nodeTypes = useMemo(() => ({ codeNode: CodeNode }), [])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -126,8 +128,6 @@ export default function VisualizePage() {
     WebkitBackdropFilter: 'blur(20px)',
     padding: '14px',
   }
-
-  const nodeTypes = useMemo(() => ({ codeNode: CodeNode }), [])
 
   return (
     <div className="flex h-full">

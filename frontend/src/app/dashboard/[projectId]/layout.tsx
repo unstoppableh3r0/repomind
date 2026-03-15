@@ -34,12 +34,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const repoInitial = repoName.split('/').pop()?.[0]?.toUpperCase() || 'R'
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#080810', color: '#f0f0f5' }}>
+    <div className="min-h-screen" style={{ display: 'flex', background: '#080810', color: '#f0f0f5' }}>
 
       {/* ── Sidebar ── */}
       <aside
-        className="w-60 flex-shrink-0 flex flex-col"
+        className="w-60 flex-shrink-0"
         style={{
+          display: 'flex',
+          flexDirection: 'column',
           background: 'rgba(255,255,255,0.02)',
           borderRight: '1px solid rgba(255,255,255,0.07)',
           backdropFilter: 'blur(24px)',
@@ -103,7 +105,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
+        <nav
+          className="flex-1 px-3 py-4"
+          style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+        >
           <p className="px-3 text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: '#3d3e52' }}>Navigation</p>
           {NAV_ITEMS.map(item => {
             const href = `/dashboard/${projectId}${item.href}`
@@ -122,6 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   background: isActive ? 'rgba(124,111,255,0.12)' : 'transparent',
                   color: isActive ? '#a78bfa' : '#5a5b70',
                   border: isActive ? '1px solid rgba(124,111,255,0.2)' : '1px solid transparent',
+                  display: 'flex', // Guarantee flex behavior
                 }}
                 onMouseEnter={e => {
                   if (!isActive) {
@@ -148,7 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link
             href="/"
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition-all duration-150"
-            style={{ color: '#3d3e52' }}
+            style={{ color: '#3d3e52', display: 'flex' }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
                 ; (e.currentTarget as HTMLElement).style.color = '#8B8C9E'

@@ -20,12 +20,10 @@ export default function HomePage() {
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault()
     if (!url.trim()) return
-
     if (!url.startsWith('https://github.com/')) {
-      toast.error('Please enter a valid GitHub URL (https://github.com/owner/repo)')
+      toast.error('Please enter a valid GitHub URL')
       return
     }
-
     setLoading(true)
     try {
       const result = await analyzeRepo({
@@ -33,7 +31,6 @@ export default function HomePage() {
         branch: branch || 'main',
         github_token: token || undefined,
       })
-
       addProject({
         id: result.project_id,
         name: url.split('/').pop()?.replace('.git', '') || 'Repository',
@@ -42,370 +39,109 @@ export default function HomePage() {
         created_at: new Date().toISOString(),
       })
       setCurrentProject(result.project_id)
-
       toast.success('Analysis started! Redirecting...')
       router.push(`/dashboard/${result.project_id}`)
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to start analysis. Check the URL and try again.')
+      toast.error('Failed to start analysis.')
     } finally {
       setLoading(false)
     }
   }
 
-  const exampleRepos = [
-    { name: 'FastAPI', url: 'https://github.com/tiangolo/fastapi' },
-    { name: 'Next.js', url: 'https://github.com/vercel/next.js' },
-    { name: 'Django', url: 'https://github.com/django/django' },
+  const features = [
+    { icon: GitBranch, title: 'Architecture Diagrams', desc: 'Interactive graphs generated from your code.', color: '#7c6fff' },
+    { icon: Zap, title: 'Workflow Detection', desc: 'Reverse-engineers auth, payments, and more.', color: '#a78bfa' },
+    { icon: MessageSquare, title: 'Chat with Codebase', desc: 'Ask natural language questions to your repo.', color: '#ec4899' },
   ]
 
-  const features = [
-    {
-      icon: GitBranch,
-      title: 'Architecture Diagrams',
-      desc: 'Interactive module dependency graphs and service relationship maps, auto-generated from your code.',
-      color: '#7c6fff',
-      glow: 'rgba(124,111,255,0.15)',
-    },
-    {
-      icon: Zap,
-      title: 'Workflow Detection',
-      desc: 'Automatically reverse-engineers key flows: auth, payments, registrations, API lifecycles.',
-      color: '#a78bfa',
-      glow: 'rgba(167,139,250,0.15)',
-    },
-    {
-      icon: MessageSquare,
-      title: 'Chat with Codebase',
-      desc: 'Ask natural language questions. Get answers grounded in the actual code with file references.',
-      color: '#ec4899',
-      glow: 'rgba(236,72,153,0.12)',
-    },
-    {
-      icon: BookOpen,
-      title: 'Onboarding Docs',
-      desc: 'Auto-generated developer onboarding guide, architecture overview, and setup instructions.',
-      color: '#34d399',
-      glow: 'rgba(52,211,153,0.12)',
-    },
-    {
-      icon: Layers,
-      title: 'Language Agnostic',
-      desc: 'Works with Python, JavaScript, TypeScript, Java, Go, Rust, and more out of the box.',
-      color: '#f59e0b',
-      glow: 'rgba(245,158,11,0.12)',
-    },
-    {
-      icon: Code2,
-      title: 'Any GitHub Repo',
-      desc: 'Public or private repos. Just paste the URL. Analysis typically completes in 1–3 minutes.',
-      color: '#64748b',
-      glow: 'rgba(100,116,139,0.12)',
-    },
-  ]
+  const containerStyle: React.CSSProperties = {
+    minHeight: '100-vh', // fallback
+    background: '#080810',
+    color: '#ffffff',
+    fontFamily: 'Inter, sans-serif',
+    position: 'relative',
+    overflowX: 'hidden',
+    paddingBottom: '100px',
+  }
 
   return (
-    <div className="min-h-screen text-white relative overflow-hidden" style={{ background: '#080810' }}>
+    <div style={containerStyle}>
 
-      {/* ── Animated background orbs ── */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: '600px', height: '600px',
-            top: '-200px', left: '10%',
-            background: 'radial-gradient(circle, rgba(124,111,255,0.12) 0%, transparent 70%)',
-            animation: 'float 8s ease-in-out infinite',
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: '500px', height: '500px',
-            top: '-100px', right: '5%',
-            background: 'radial-gradient(circle, rgba(167,139,250,0.1) 0%, transparent 70%)',
-            animation: 'float 10s ease-in-out infinite reverse',
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: '300px', height: '300px',
-            bottom: '20%', left: '30%',
-            background: 'radial-gradient(circle, rgba(124,111,255,0.06) 0%, transparent 70%)',
-            animation: 'float 12s ease-in-out infinite',
-          }}
-        />
-        {/* Fine grid */}
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-          }}
-        />
-      </div>
+      {/* ── Background Grid ── */}
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.05, pointerEvents: 'none', backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '600px', background: 'radial-gradient(circle at 50% 0%, rgba(124,111,255,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-      {/* ── Navigation ── */}
-      <nav className="relative z-20 flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #7c6fff 0%, #a78bfa 100%)', boxShadow: '0 0 16px rgba(124,111,255,0.4)' }}
-          >
-            <Layers className="w-4 h-4 text-white" />
+      {/* ── Nav ── */}
+      <nav style={{ position: 'relative', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 40px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #7c6fff 0%, #a78bfa 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(124,111,255,0.3)' }}>
+            <Layers color="white" size={20} />
           </div>
-          <span className="font-semibold text-base tracking-tight" style={{ letterSpacing: '-0.01em' }}>RepoMind</span>
+          <span style={{ fontWeight: 800, fontSize: '20px', letterSpacing: '-0.5px' }}>RepoMind</span>
         </div>
-
-        <div className="flex items-center gap-3">
-          <a
-            href="/dashboard"
-            className="text-sm transition-colors"
-            style={{ color: '#8B8C9E' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#f0f0f5')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#8B8C9E')}
-          >
-            Dashboard
-          </a>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all"
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              color: '#c0c0cc',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.09)'
-                ; (e.currentTarget as HTMLElement).style.color = '#fff'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'
-                ; (e.currentTarget as HTMLElement).style.color = '#c0c0cc'
-            }}
-          >
-            <Github className="w-3.5 h-3.5" />
-            GitHub
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <a href="/dashboard" style={{ color: '#8B8C9E', fontSize: '14px', textDecoration: 'none', fontWeight: 500 }}>Dashboard</a>
+          <a href="https://github.com" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px 18px', borderRadius: '12px', fontSize: '14px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Github size={16} /> GitHub
           </a>
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <main className="relative z-10 max-w-4xl mx-auto px-6 pt-20 pb-28 text-center">
-
-        {/* Badge */}
-        <div
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm mb-8"
-          style={{
-            background: 'rgba(124,111,255,0.1)',
-            border: '1px solid rgba(124,111,255,0.25)',
-            color: '#a78bfa',
-            animation: 'fade-up 0.5s ease-out',
-          }}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span className="font-medium">AI-Powered Codebase Understanding</span>
+      <main style={{ position: 'relative', zIndex: 10, maxWidth: '800px', margin: '0 auto', padding: '100px 20px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '99px', background: 'rgba(124,111,255,0.1)', border: '1px solid rgba(124,111,255,0.2)', color: '#a78bfa', fontSize: '13px', fontWeight: 600, marginBottom: '40px' }}>
+          <Sparkles size={14} /> AI-Powered Codebase Understanding
         </div>
 
-        {/* Headline */}
-        <h1
-          className="font-bold tracking-tight mb-6"
-          style={{
-            fontSize: 'clamp(2.8rem, 6vw, 4.5rem)',
-            lineHeight: '1.08',
-            letterSpacing: '-0.03em',
-            animation: 'fade-up 0.6s ease-out 0.1s both',
-          }}
-        >
-          Understand any codebase
-          <br />
-          <span style={{
-            background: 'linear-gradient(135deg, #a78bfa 0%, #7c6fff 45%, #c4b5fd 100%)',
-            backgroundSize: '200% 200%',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            animation: 'gradientShift 5s ease infinite',
-            display: 'inline-block',
-          }}>
+        <h1 style={{ fontSize: '72px', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-2.5px', marginBottom: '24px' }}>
+          Understand any codebase <br />
+          <span style={{ background: 'linear-gradient(135deg, #a78bfa 0%, #7c6fff 50%, #c4b5fd 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             in minutes, not weeks
           </span>
         </h1>
 
-        {/* Subheadline */}
-        <p
-          className="text-lg max-w-xl mx-auto mb-12 leading-relaxed"
-          style={{
-            color: '#8B8C9E',
-            animation: 'fade-up 0.6s ease-out 0.2s both',
-          }}
-        >
-          Paste a GitHub URL. RepoMind maps the architecture, detects workflows, and lets you chat with the codebase — instantly.
+        <p style={{ fontSize: '20px', color: '#8B8C9E', lineHeight: 1.6, maxWidth: '600px', margin: '0 auto 48px' }}>
+          Paste a GitHub URL to map architecture, detect workflows, and chat with your codebase instantly.
         </p>
 
-        {/* ── Input Form ── */}
-        <form
-          onSubmit={handleAnalyze}
-          className="max-w-2xl mx-auto"
-          style={{ animation: 'fade-up 0.6s ease-out 0.3s both' }}
-        >
-          <div
-            className="rounded-2xl p-1.5 mb-3 transition-all duration-300"
-            style={{
-              background: focused ? 'rgba(124,111,255,0.06)' : 'rgba(255,255,255,0.03)',
-              border: focused ? '1px solid rgba(124,111,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
-              boxShadow: focused ? '0 0 0 4px rgba(124,111,255,0.08), 0 0 40px rgba(124,111,255,0.1)' : 'none',
-            }}
-          >
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <Github
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                  style={{ color: '#5a5b70' }}
-                />
-                <input
-                  type="url"
-                  value={url}
-                  onChange={e => setUrl(e.target.value)}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
-                  placeholder="https://github.com/owner/repository"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm font-medium transition-colors"
-                  style={{
-                    background: 'transparent',
-                    outline: 'none',
-                    border: 'none',
-                    caretColor: '#a78bfa',
-                  }}
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0"
-                style={{
-                  background: loading ? 'rgba(124,111,255,0.4)' : 'linear-gradient(135deg, #7c6fff 0%, #a78bfa 100%)',
-                  color: '#fff',
-                  boxShadow: loading ? 'none' : '0 0 20px rgba(124,111,255,0.35)',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transform: 'translateZ(0)',
-                }}
-                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.boxShadow = '0 0 30px rgba(124,111,255,0.5)' }}
-                onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLElement).style.boxShadow = '0 0 20px rgba(124,111,255,0.35)' }}
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>Analyze <ArrowRight className="w-4 h-4" /></>
-                )}
-              </button>
+        {/* ── Input ── */}
+        <form onSubmit={handleAnalyze} style={{ maxWidth: '640px', margin: '0 auto 80px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: focused ? '1px solid rgba(124,111,255,0.5)' : '1px solid rgba(255,255,255,0.1)', padding: '8px', borderRadius: '20px', display: 'flex', gap: '8px', transition: 'all 0.2s', boxShadow: focused ? '0 0 40px rgba(124,111,255,0.15)' : 'none' }}>
+            <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Github color="rgba(255,255,255,0.3)" size={20} style={{ marginLeft: '16px', position: 'absolute' }} />
+              <input
+                type="url"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder="https://github.com/owner/repository"
+                style={{ width: '100%', background: 'transparent', border: 'none', padding: '16px 16px 16px 48px', color: 'white', fontSize: '16px', outline: 'none' }}
+                required
+              />
             </div>
+            <button type="submit" disabled={loading} style={{ background: 'linear-gradient(135deg, #7c6fff 0%, #a78bfa 100%)', border: 'none', color: 'white', padding: '0 32px', borderRadius: '14px', fontSize: '16px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', transition: 'transform 0.1s' }}>
+              {loading ? 'Analyzing...' : 'Analyze'}
+            </button>
           </div>
 
-          {/* Advanced toggle */}
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-1 mx-auto text-xs transition-colors mb-1"
-            style={{ color: '#5a5b70' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#8B8C9E')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#5a5b70')}
-          >
-            <ChevronRight
-              className="w-3 h-3 transition-transform duration-200"
-              style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}
-            />
-            Advanced options
-          </button>
-
-          {showAdvanced && (
-            <div className="mt-3 grid grid-cols-2 gap-3 text-left animate-fade-in">
-              {[
-                { label: 'Branch', value: branch, setter: setBranch, placeholder: 'main', type: 'text' },
-                { label: 'GitHub Token (private repos)', value: token, setter: setToken, placeholder: 'ghp_...', type: 'password' },
-              ].map(field => (
-                <div key={field.label}>
-                  <label className="block text-[11px] font-medium mb-1.5" style={{ color: '#5a5b70' }}>{field.label}</label>
-                  <input
-                    type={field.type}
-                    value={field.value}
-                    onChange={e => field.setter(e.target.value)}
-                    placeholder={field.placeholder}
-                    className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-zinc-600 transition-colors"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      outline: 'none',
-                    }}
-                    onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,111,255,0.4)'}
-                    onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Example repos */}
-          <div className="mt-5 flex items-center justify-center gap-3 text-sm">
-            <span style={{ color: '#3d3e52' }}>Try:</span>
-            {exampleRepos.map(r => (
-              <button
-                key={r.name}
-                type="button"
-                onClick={() => setUrl(r.url)}
-                className="transition-colors text-xs font-medium"
-                style={{ color: '#5a5b70' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#5a5b70')}
-              >
-                {r.name}
-              </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '20px', color: '#3d3e52', fontSize: '13px' }}>
+            Try:
+            {['FastAPI', 'Next.js', 'Django'].map(repo => (
+              <button key={repo} type="button" onClick={() => setUrl(`https://github.com/example/${repo.toLowerCase()}`)} style={{ background: 'none', border: 'none', color: '#5a5b70', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '4px' }}>{repo}</button>
             ))}
           </div>
         </form>
 
-        {/* ── Feature grid ── */}
-        <div
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-24 text-left"
-          style={{ animation: 'fade-up 0.7s ease-out 0.4s both' }}
-        >
+        {/* ── Features ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', textAlign: 'left' }}>
           {features.map(f => (
-            <div
-              key={f.title}
-              className="p-5 rounded-2xl cursor-default group transition-all duration-300"
-              style={{
-                background: 'rgba(255,255,255,0.025)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.background = `${f.glow}`
-                el.style.borderColor = `${f.color}40`
-                el.style.transform = 'translateY(-2px)'
-                el.style.boxShadow = `0 8px 32px ${f.glow}`
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.background = 'rgba(255,255,255,0.025)'
-                el.style.borderColor = 'rgba(255,255,255,0.07)'
-                el.style.transform = 'translateY(0)'
-                el.style.boxShadow = 'none'
-              }}
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: `${f.color}18`, border: `1px solid ${f.color}30` }}
-              >
-                <f.icon className="w-4.5 h-4.5" style={{ color: f.color, width: '16px', height: '16px' }} />
+            <div key={f.title} style={{ padding: '24px', borderRadius: '24px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: f.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                <f.icon color={f.color} size={22} />
               </div>
-              <h3 className="font-semibold text-sm mb-2" style={{ color: '#e8e8f0' }}>{f.title}</h3>
-              <p className="text-xs leading-relaxed" style={{ color: '#6b6c80' }}>{f.desc}</p>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>{f.title}</h3>
+              <p style={{ fontSize: '14px', color: '#6b6c80', lineHeight: 1.5 }}>{f.desc}</p>
             </div>
           ))}
         </div>
