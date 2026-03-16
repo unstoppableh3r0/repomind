@@ -36,7 +36,6 @@ To ensure everyone has a unified working environment and to avoid common errors 
 
 RepoMind solves the #1 pain point for new developers joining a team: **understanding a large, complex codebase quickly**.
 
-You paste a GitHub URL. RepoMind:
 
 1. **Clones** the repository
 2. **Analyzes** the code with AST parsing and static analysis
