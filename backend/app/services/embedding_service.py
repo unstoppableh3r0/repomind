@@ -140,6 +140,9 @@ class EmbeddingService:
                 all_embeddings.extend(batch_embeddings)
                 embedded_chunks.extend(batch)
                 logger.info(f"Embedded batch {i // batch_size + 1}/{(len(chunks) // batch_size) + 1}")
+                
+                # Small breather for the CPU/Network
+                await asyncio.sleep(0.05)
 
             except Exception as e:
                 logger.error(f"Embedding error for batch {i}: {e}")

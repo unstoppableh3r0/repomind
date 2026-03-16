@@ -107,6 +107,9 @@ async def run_analysis_pipeline(
         ][:200]
 
         for file_info in source_files:
+            # Yield control to prevent CPU lockout
+            await asyncio.sleep(0.01)
+            
             content = analyzer.read_file(local_path, file_info["path"])
             if not content:
                 continue
@@ -166,7 +169,11 @@ async def run_analysis_pipeline(
         embedded_chunks = await embedding_service.embed_chunks(all_chunks)
 
         # Save code chunks to DB
-        for chunk in embedded_chunks[:5000]:  # Limit DB inserts
+        for i, chunk in enumerate(embedded_chunks[:5000]):  # Limit DB inserts
+            # Yield every 10 inserts to keep event loop responsive
+            if i % 10 == 0:
+                await asyncio.sleep(0.01)
+                
             db.add(CodeChunk(
                 repository_id=repo.id,
                 file_path=chunk.get("file_path", ""),

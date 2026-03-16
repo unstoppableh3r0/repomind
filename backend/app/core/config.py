@@ -38,10 +38,10 @@ class Settings(BaseSettings):
     REPOS_DIR: str = "/tmp/repomind_repos"
     FAISS_INDEX_DIR: str = "/tmp/repomind_faiss"
 
-    # Analysis limits
-    MAX_REPO_SIZE_MB: int = 500
-    MAX_FILE_SIZE_KB: int = 500
-    MAX_FILES_PER_REPO: int = 5000
+    # Analysis limits (Conservative for local development)
+    MAX_REPO_SIZE_MB: int = 100
+    MAX_FILE_SIZE_KB: int = 200
+    MAX_FILES_PER_REPO: int = 1000
 
     # Chunking settings
     CHUNK_SIZE: int = 1000
