@@ -1,10 +1,34 @@
 # RepoMind 🧠
 
-> **AI-powered developer onboarding platform** — understand any GitHub codebase in minutes, not weeks.
+AI-powered developer onboarding platform.
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?logo=openai)](https://openai.com)
+## 🚀 Getting Started (Team Synchronization)
+
+To ensure everyone has a unified working environment and to avoid common errors when pulling code, please follow these steps:
+
+### 1. Prerequisites
+- **Git**: Ensure Git is installed and added to your PATH.
+- **Python 3.10+**: Recommended version.
+- **Node.js 18+**: For the frontend.
+
+### 2. Backend Setup
+1. Navigate to the `backend` directory: `cd backend`
+2. Create a virtual environment: `python -m venv venv`
+3. Activate it:
+   - Windows: `venv\Scripts\activate`
+   - Mac/Linux: `source venv/bin/activate`
+4. Install dependencies: `pip install -r requirements.txt`
+5. **Environment Setup**: 
+   - Copy `.env.example` to `.env`.
+   - Add your `OPENAI_API_KEY`.
+   - The default `DATABASE_URL` is set to SQLite for easy local development.
+6. Run migrations: `alembic upgrade head`
+7. Start the server: `python -m uvicorn app.main:app --reload`
+
+### 3. Frontend Setup
+1. Navigate to the `frontend` directory: `cd frontend`
+2. Install dependencies: `npm install`
+3. Start the dev server: `npm run dev`
 
 ---
 
@@ -36,6 +60,14 @@ You paste a GitHub URL. RepoMind:
 
 ---
 
+## 🛠️ Common Fixes & Efficiency
+
+- **Windows Subprocess Error**: If you encounter `NotImplementedError` during analysis, ensure you have pulled the latest code. I've switched the cloner to a thread-based model that works reliably on Windows.
+- **Database Consistency**: We use SQLite locally (`repomind.db`). This file is gitignored. If you face schema issues, run `alembic upgrade head`.
+- **Environment Inconsistencies**: Always check that your `.env` matches the latest `.env.example`.
+
+---
+
 ## Tech Stack
 
 **Frontend**
@@ -48,20 +80,9 @@ You paste a GitHub URL. RepoMind:
 **Backend**
 - FastAPI + Uvicorn (async)
 - SQLAlchemy 2.0 (async ORM)
-- PostgreSQL (project/analysis data)
+- SQLite (local) / PostgreSQL (production)
 - FAISS (vector similarity search)
 - NetworkX (dependency graph analysis)
-
-**AI Layer**
-- OpenAI GPT-4o (analysis, chat)
-- OpenAI text-embedding-3-small (code embeddings)
-- AST parsing (Python)
-- Regex-based parsing (JS/TS)
-
-**Infrastructure**
-- Vercel (frontend)
-- Render / Railway (backend)
-- Supabase (PostgreSQL)
 
 ---
 
@@ -70,96 +91,12 @@ You paste a GitHub URL. RepoMind:
 ```
 repomind/
 ├── backend/                    # FastAPI Python backend
-│   ├── app/
-│   │   ├── main.py             # FastAPI app entry point
-│   │   ├── api/                # Route handlers
-│   │   │   ├── analyze.py      # POST /analyze-repo
-│   │   │   ├── chat.py         # POST /chat
-│   │   │   ├── structure.py    # GET /repo-structure
-│   │   │   ├── architecture.py # GET /architecture
-│   │   │   ├── workflows.py    # GET /workflows
-│   │   │   └── docs.py         # GET /docs, POST /explain
-│   │   ├── core/
-│   │   │   ├── config.py       # Settings (pydantic-settings)
-│   │   │   └── database.py     # Async SQLAlchemy engine
-│   │   ├── models/
-│   │   │   └── models.py       # SQLAlchemy ORM models
-│   │   ├── schemas/
-│   │   │   └── schemas.py      # Pydantic request/response schemas
-│   │   └── services/
-│   │       ├── repo_analyzer.py        # Git clone + directory scan
-│   │       ├── code_parser.py          # AST + regex code parsing
-│   │       ├── graph_builder.py        # NetworkX dependency graph
-│   │       ├── embedding_service.py    # FAISS embedding + search
-│   │       ├── ai_service.py           # OpenAI LLM prompts
-│   │       └── analysis_orchestrator.py # Full pipeline coordinator
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
-│
 ├── frontend/                   # Next.js React frontend
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── page.tsx                      # Landing page
-│   │   │   ├── layout.tsx                    # Root layout
-│   │   │   └── dashboard/[projectId]/
-│   │   │       ├── layout.tsx                # Sidebar layout
-│   │   │       ├── page.tsx                  # Overview + status
-│   │   │       ├── visualize/page.tsx        # React Flow graph
-│   │   │       ├── chat/page.tsx             # Chat interface
-│   │   │       ├── workflows/page.tsx        # Workflow cards
-│   │   │       └── docs/page.tsx             # Documentation
-│   │   └── lib/
-│   │       ├── api.ts          # Typed API client (axios)
-│   │       ├── store.ts        # Zustand global state
-│   │       └── utils.ts        # Helper functions
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── tsconfig.json
-│   └── .env.example
-│
-├── docs/
-│   └── DEPLOYMENT.md           # Full deployment guide
-├── docker-compose.yml          # Local development stack
+├── docs/                       # Documentation
 └── README.md
 ```
 
----
-
-## Quick Start
-
-```bash
-# 1. Clone this repository
-git clone https://github.com/your-org/repomind
-cd repomind
-
-# 2. Start everything with Docker
-export OPENAI_API_KEY=sk-your-key-here
-docker-compose up --build
-
-# 3. Open http://localhost:3000
-# 4. Paste a GitHub URL and click Analyze
-```
-
-For manual setup, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
-
----
-
-## API Reference
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/analyze-repo` | POST | Start repository analysis |
-| `/api/v1/analyze-repo/{id}/status` | GET | Poll analysis progress |
-| `/api/v1/repo-structure/{id}` | GET | File tree + language stats |
-| `/api/v1/architecture/{id}` | GET | Dependency graph + explanation |
-| `/api/v1/workflows/{id}` | GET | Detected developer workflows |
-| `/api/v1/docs/{id}` | GET | Generated documentation |
-| `/api/v1/chat` | POST | RAG-powered chat with codebase |
-| `/api/v1/explain` | POST | Explain a specific file/function |
-| `/api/v1/projects` | GET | List all analyzed projects |
-
-Interactive API docs: `http://localhost:8000/docs`
+Detailed structure can be found in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
@@ -170,9 +107,3 @@ Interactive API docs: `http://localhost:8000/docs`
 3. Commit changes: `git commit -m 'feat: add my feature'`
 4. Push: `git push origin feature/my-feature`
 5. Open a Pull Request
-
----
-
-## License
-
-MIT License — see [LICENSE](LICENSE) file.

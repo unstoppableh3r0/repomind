@@ -118,24 +118,30 @@ class RepositoryAnalyzer:
         logger.info(f"Cloning {github_url} → {local_path}")
 
         try:
-            proc = await asyncio.create_subprocess_exec(
-                "git", "clone", "--depth=1", "--branch", branch,
-                clone_url, local_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
-
-            if proc.returncode != 0:
-                # Try default branch if specified branch fails
-                proc2 = await asyncio.create_subprocess_exec(
-                    "git", "clone", "--depth=1", clone_url, local_path,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+            # Helper function for synchronous git call
+            def run_git_clone(url: str, path: str, branch_name: str = None):
+                args = ["git", "clone", "--depth=1"]
+                if branch_name:
+                    args.extend(["--branch", branch_name])
+                args.extend([url, path])
+                return subprocess.run(
+                    args,
+                    capture_output=True,
+                    text=True,
+                    timeout=300
                 )
-                await asyncio.wait_for(proc2.communicate(), timeout=300)
-                if proc2.returncode != 0:
-                    raise RuntimeError(f"Git clone failed: {stderr.decode()}")
+
+            # Use to_thread for Windows compatibility (avoids NotImplementedError)
+            result = await asyncio.to_thread(run_git_clone, clone_url, local_path, branch)
+
+            if result.returncode != 0:
+                logger.warning(f"Git clone with branch {branch} failed, trying default branch...")
+                # Try default branch if specified branch fails
+                result2 = await asyncio.to_thread(run_git_clone, clone_url, local_path)
+                
+                if result2.returncode != 0:
+                    error_msg = result2.stderr or result.stderr
+                    raise RuntimeError(f"Git clone failed: {error_msg}")
 
             logger.info(f"Successfully cloned to {local_path}")
             return local_path
