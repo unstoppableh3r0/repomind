@@ -243,7 +243,7 @@ class JavaScriptParser:
                     "file_path": file_path,
                     "start_line": line_num,
                     "end_line": line_num + 10,
-                    "content": lines[max(0, line_num - 1):line_num + 10],
+                    "content": "\n".join(lines[max(0, line_num - 1):line_num + 10]),
                     "decorators": [],
                     "imports": imports,
                     "calls": [],
