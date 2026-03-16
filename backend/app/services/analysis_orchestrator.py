@@ -13,6 +13,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
+from app.core.database import AsyncSessionLocal
 from app.models.models import Project, Repository, CodeChunk, AnalysisResult, AnalysisStatus
 from app.services.repo_analyzer import RepositoryAnalyzer
 from app.services.code_parser import CodeParser
@@ -32,7 +33,6 @@ async def run_analysis_pipeline(
     github_url: str,
     branch: str,
     github_token: Optional[str],
-    db: AsyncSession,
 ) -> None:
     """
     Full async analysis pipeline. Runs as a background task.
@@ -46,6 +46,7 @@ async def run_analysis_pipeline(
             "progress_percent": percent,
         }
 
+    db = AsyncSessionLocal()
     try:
         # ── Step 1: Clone Repository ───────────────────────────────────────────
         update_progress("Cloning repository...", 5)
@@ -183,68 +184,86 @@ async def run_analysis_pipeline(
         update_progress("Generating AI analysis...", 70)
 
         # Generate project summary
-        summary = await ai_service.generate_project_summary(
-            repo_metadata={"owner": owner, "repo_name": repo_name,
-                           "total_files": scan_result["total_files"]},
-            key_files=key_files,
-            languages=scan_result["languages"],
-            frameworks=scan_result["frameworks"],
-        )
+        try:
+            summary = await ai_service.generate_project_summary(
+                repo_metadata={"owner": owner, "repo_name": repo_name,
+                               "total_files": scan_result["total_files"]},
+                key_files=key_files,
+                languages=scan_result["languages"],
+                frameworks=scan_result["frameworks"],
+            )
 
-        # Save summary
-        db.add(AnalysisResult(
-            project_id=uuid.UUID(project_id),
-            result_type="summary",
-            content=summary,
-            raw_data={"languages": scan_result["languages"], "frameworks": scan_result["frameworks"]},
-        ))
+            # Save summary
+            db.add(AnalysisResult(
+                project_id=uuid.UUID(project_id),
+                result_type="summary",
+                content=summary,
+                raw_data={"languages": scan_result["languages"], "frameworks": scan_result["frameworks"]},
+            ))
+            await db.flush()
+        except Exception as e:
+            logger.error(f"Summary generation failed: {e}")
+            summary = {"project_name": repo_name, "description": "Analysis partially failed."}
 
         update_progress("Analyzing architecture...", 80)
 
         # Generate architecture explanation
-        architecture = await ai_service.generate_architecture_explanation(
-            summary=summary,
-            graph_data=graph_data,
-            symbols_by_type=symbols_by_type,
-            key_files=key_files,
-        )
+        try:
+            architecture = await ai_service.generate_architecture_explanation(
+                summary=summary,
+                graph_data=graph_data,
+                symbols_by_type=symbols_by_type,
+                key_files=key_files,
+            )
 
-        db.add(AnalysisResult(
-            project_id=uuid.UUID(project_id),
-            result_type="architecture",
-            content={**architecture, "graph": graph_data},
-        ))
+            db.add(AnalysisResult(
+                project_id=uuid.UUID(project_id),
+                result_type="architecture",
+                content={**architecture, "graph": graph_data},
+            ))
+            await db.flush()
+        except Exception as e:
+            logger.error(f"Architecture analysis failed: {e}")
+            architecture = {}
 
         update_progress("Detecting workflows...", 88)
 
         # Detect workflows
-        workflows = await ai_service.detect_workflows(
-            routes=symbols_by_type.get("route", []),
-            symbols_by_type=symbols_by_type,
-            key_files=key_files,
-        )
+        try:
+            workflows = await ai_service.detect_workflows(
+                routes=symbols_by_type.get("route", []),
+                symbols_by_type=symbols_by_type,
+                key_files=key_files,
+            )
 
-        db.add(AnalysisResult(
-            project_id=uuid.UUID(project_id),
-            result_type="workflows",
-            content={"workflows": workflows},
-        ))
+            db.add(AnalysisResult(
+                project_id=uuid.UUID(project_id),
+                result_type="workflows",
+                content={"workflows": workflows},
+            ))
+            await db.flush()
+        except Exception as e:
+            logger.error(f"Workflow detection failed: {e}")
+            workflows = []
 
         update_progress("Generating documentation...", 94)
 
         # Generate onboarding docs
-        docs = await ai_service.generate_onboarding_docs(
-            summary=summary,
-            architecture=architecture,
-            workflows=workflows,
-            repo_metadata={"owner": owner, "repo_name": repo_name},
-        )
+        try:
+            docs = await ai_service.generate_onboarding_docs(
+                summary=summary,
+                architecture=architecture,
+                workflows=workflows,
+                repo_metadata={"owner": owner, "repo_name": repo_name},
+            )
 
-        db.add(AnalysisResult(
-            project_id=uuid.UUID(project_id),
-            result_type="documentation",
-            content=docs,
-        ))
+            db.add(AnalysisResult(
+                project_id=uuid.UUID(project_id),
+                result_type="documentation",
+                content=docs,
+            ))
+        except Exception as e:
+            logger.error(f"Documentation generation failed: {e}")
 
         # ── Step 7: Complete ──────────────────────────────────────────────────
         await db.commit()
@@ -260,6 +279,10 @@ async def run_analysis_pipeline(
 
     except Exception as e:
         logger.error(f"❌ Analysis failed for project {project_id}: {e}", exc_info=True)
+        with open("analysis_error.log", "a") as f:
+            f.write(f"Project {project_id} failed: {str(e)}\n")
+            import traceback
+            f.write(traceback.format_exc() + "\n")
         await db.rollback()
         await _update_project_status(db, project_id, AnalysisStatus.FAILED)
         analysis_progress[project_id] = {
@@ -268,6 +291,8 @@ async def run_analysis_pipeline(
             "progress_percent": 0,
             "error": str(e),
         }
+    finally:
+        await db.close()
 
 
 async def _update_project_status(db: AsyncSession, project_id: str, status: AnalysisStatus):

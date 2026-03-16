@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 import logging
+import os
+import sys
+import asyncio
 
 from app.core.config import settings
 from app.core.database import engine, Base
@@ -15,10 +18,18 @@ from app.api import analyze, chat, structure, architecture, workflows, docs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Set Windows Proactor Event Loop Policy for subprocess support
+if sys.platform == "win32":
+    logger.info("Setting WindowsProactorEventLoopPolicy")
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
+    # Log loop type
+    loop = asyncio.get_running_loop()
+    logger.info(f"Running on event loop: {type(loop).__name__}")
     logger.info("Starting RepoMind API...")
     # Create database tables
     async with engine.begin() as conn:

@@ -8,9 +8,10 @@ import {
   CheckCircle2, Clock, AlertCircle, Loader2,
   ArrowRight, Package, Layers
 } from 'lucide-react'
-import { getAnalysisStatus, getRepoStructure, getArchitecture } from '@/lib/api'
+import { getAnalysisStatus, getRepoStructure, getArchitecture, analyzeRepo } from '@/lib/api'
 import { useStore } from '@/lib/store'
 import { formatNumber, formatFileSize, getLanguageColor } from '@/lib/utils'
+import { toast } from 'sonner'
 import type { RepoStructure, Architecture, AnalysisStatus } from '@/lib/api'
 
 const STATUS_CONFIG = {
@@ -25,12 +26,14 @@ const STATUS_CONFIG = {
 export default function DashboardPage() {
   const params = useParams()
   const projectId = params.projectId as string
-  const { setStructure, setArchitecture, structures, architectures, updateProject } = useStore()
+  const { setStructure, setArchitecture, structures, architectures, updateProject, projects } = useStore()
 
   const [status, setStatus] = useState<AnalysisStatus | null>(null)
   const [structure, setLocalStructure] = useState<RepoStructure | null>(null)
   const [arch, setLocalArch] = useState<Architecture | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const project = projects.find(p => p.id === projectId)
 
   const fetchData = useCallback(async () => {
     try {
@@ -60,6 +63,27 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }, [projectId, structures, architectures, setStructure, setArchitecture, updateProject])
+
+  const handleRetry = async () => {
+    if (!project?.github_url) {
+      toast.error('Cannot retry: Missing repository URL.')
+      return
+    }
+    setLoading(true)
+    try {
+      await analyzeRepo({
+        github_url: project.github_url,
+        branch: 'main',
+      })
+      updateProject(projectId, { status: 'pending' })
+      toast.success('Analysis restarted!')
+      fetchData()
+    } catch (err) {
+      toast.error('Failed to restart analysis.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchData()
@@ -150,16 +174,32 @@ export default function DashboardPage() {
       {/* Error state */}
       {status?.status === 'failed' && (
         <div
-          className="mb-6 p-4 rounded-2xl animate-fade-in"
+          className="mb-6 p-5 rounded-2xl animate-fade-in"
           style={{ background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)' }}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <AlertCircle className="w-4 h-4" style={{ color: '#f87171' }} />
-            <span className="font-semibold text-sm" style={{ color: '#f87171' }}>Analysis Failed</span>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-red-500/10">
+              <AlertCircle className="w-5 h-5" style={{ color: '#f87171' }} />
+            </div>
+            <div>
+              <span className="font-bold text-sm block" style={{ color: '#f87171' }}>Analysis Failed</span>
+              {status.error_message && (
+                <p className="text-xs mt-0.5" style={{ color: '#fca5a5' }}>{status.error_message}</p>
+              )}
+            </div>
           </div>
-          {status.error_message && (
-            <p className="text-sm mt-1" style={{ color: '#fca5a5' }}>{status.error_message}</p>
-          )}
+          <button
+            onClick={handleRetry}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)',
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(248,113,113,0.25)',
+            }}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Retry Analysis
+          </button>
         </div>
       )}
 
