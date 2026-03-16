@@ -1,0 +1,293 @@
+uvicorn : Traceback 
+(most recent call 
+last):
+At line:1 char:5
++ & { uvicorn 
+app.main:app --host 
+0.0.0.0 --port 8000 } 
+2>&1 | Out-File ...
++     ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Traceback (mo   
+ st recent call las    
+t)::String) [], Re    
+moteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+  File "C:\Program File
+s\WindowsApps\PythonSof
+twareFoundation.Python.
+3.10_3.10.3056.0_x64__q
+bz5n2kfra8p0\lib\runpy.
+py", line 196, in 
+_run_module_as_main
+    return 
+_run_code(code, 
+main_globals, None,
+  File "C:\Program File
+s\WindowsApps\PythonSof
+twareFoundation.Python.
+3.10_3.10.3056.0_x64__q
+bz5n2kfra8p0\lib\runpy.
+py", line 86, in 
+_run_code
+    exec(code, 
+run_globals)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\Scripts\uvicorn.ex
+e\__main__.py", line 
+5, in <module>
+    sys.exit(main())
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\clic
+k\core.py", line 1485, 
+in __call__
+    return 
+self.main(*args, 
+**kwargs)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\clic
+k\core.py", line 1406, 
+in main
+    rv = 
+self.invoke(ctx)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\clic
+k\core.py", line 1269, 
+in invoke
+    return ctx.invoke(s
+elf.callback, 
+**ctx.params)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\clic
+k\core.py", line 824, 
+in invoke
+    return 
+callback(*args, 
+**kwargs)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\main.py", line 
+409, in main
+    run(
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\main.py", line 
+575, in run
+    server.run()
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\server.py", line 
+65, in run
+    return asyncio.run(
+self.serve(sockets=sock
+ets))
+  File "C:\Program File
+s\WindowsApps\PythonSof
+twareFoundation.Python.
+3.10_3.10.3056.0_x64__q
+bz5n2kfra8p0\lib\asynci
+o\runners.py", line 
+44, in run
+    return loop.run_unt
+il_complete(main)
+  File "C:\Program File
+s\WindowsApps\PythonSof
+twareFoundation.Python.
+3.10_3.10.3056.0_x64__q
+bz5n2kfra8p0\lib\asynci
+o\base_events.py", 
+line 649, in 
+run_until_complete
+    return 
+future.result()
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\server.py", line 
+69, in serve
+    await 
+self._serve(sockets)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\server.py", line 
+76, in _serve
+    config.load()
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\config.py", line 
+433, in load
+    self.loaded_app = i
+mport_from_string(self.
+app)
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\uvic
+orn\importer.py", line 
+19, in 
+import_from_string
+    module = importlib.
+import_module(module_st
+r)
+  File "C:\Program File
+s\WindowsApps\PythonSof
+twareFoundation.Python.
+3.10_3.10.3056.0_x64__q
+bz5n2kfra8p0\lib\import
+lib\__init__.py", line 
+126, in import_module
+    return _bootstrap._
+gcd_import(name[level:]
+, package, level)
+  File "<frozen importl
+ib._bootstrap>", line 
+1050, in _gcd_import
+  File "<frozen importl
+ib._bootstrap>", line 
+1027, in _find_and_load
+  File "<frozen importl
+ib._bootstrap>", line 
+1006, in 
+_find_and_load_unlocked
+  File "<frozen importl
+ib._bootstrap>", line 
+688, in _load_unlocked
+  File "<frozen importl
+ib._bootstrap_external>
+", line 883, in 
+exec_module
+  File "<frozen importl
+ib._bootstrap>", line 
+241, in _call_with_fram
+es_removed
+  File "C:\Users\Ajay 
+N Mukunth\Downloads\fil
+es\repomind\repomind\ba
+ckend\app\main.py", 
+line 12, in <module>
+    from 
+app.core.database 
+import engine, Base
+  File "C:\Users\Ajay 
+N Mukunth\Downloads\fil
+es\repomind\repomind\ba
+ckend\app\core\database
+.py", line 9, in 
+<module>
+    engine = 
+create_async_engine(
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\sqla
+lchemy\ext\asyncio\engi
+ne.py", line 120, in 
+create_async_engine
+    sync_engine = 
+_create_engine(url, 
+**kw)
+  File "<string>", 
+line 2, in 
+create_engine
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\sqla
+lchemy\util\deprecation
+s.py", line 281, in 
+warned
+    return fn(*args, 
+**kwargs)  # type: 
+ignore[no-any-return]
+  File "C:\Users\Ajay 
+N Mukunth\AppData\Local
+\Packages\PythonSoftwar
+eFoundation.Python.3.10
+_qbz5n2kfra8p0\LocalCac
+he\local-packages\Pytho
+n310\site-packages\sqla
+lchemy\engine\create.py
+", line 697, in 
+create_engine
+    raise TypeError(
+TypeError: Invalid 
+argument(s) 'pool_size'
+,'max_overflow' sent 
+to create_engine(), 
+using configuration SQL
+iteDialect_aiosqlite/Nu
+llPool/Engine.  Please 
+check that the keyword 
+arguments are 
+appropriate for this 
+combination of 
+components.

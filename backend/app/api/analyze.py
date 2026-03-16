@@ -65,7 +65,6 @@ async def analyze_repository(
         github_url=request.github_url,
         branch=request.branch or "main",
         github_token=request.github_token,
-        db=db,
     )
 
     return AnalyzeRepoResponse(
