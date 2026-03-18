@@ -136,7 +136,12 @@ export default function HomePage() {
         {/* ── Features ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', textAlign: 'left' }}>
           {features.map(f => (
-            <div key={f.title} style={{ padding: '24px', borderRadius: '24px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div
+              key={f.title}
+              className="rm-card"
+              data-interactive="true"
+              style={{ padding: '24px', borderRadius: '24px' }}
+            >
               <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: f.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
                 <f.icon color={f.color} size={22} />
               </div>

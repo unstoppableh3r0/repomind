@@ -65,11 +65,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Project info card */}
           <div
-            className="rounded-xl p-3"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
+            className="rounded-xl p-3 rm-card"
+            data-interactive="true"
           >
             <div className="flex items-center gap-2.5 mb-2">
               <div
