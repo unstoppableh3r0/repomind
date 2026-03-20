@@ -1,12 +1,13 @@
 """
 RepoMind Analysis Orchestrator
 Coordinates the full analysis pipeline:
-Clone → Scan → Parse → Graph → Embed → AI Analysis
+Clone → Scan → Parse → Graph → AI Analysis
+(No embedding — chat uses on-demand LLM-powered file selection)
 """
 
 import asyncio
 import uuid
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 import logging
 
@@ -18,7 +19,6 @@ from app.models.models import Project, Repository, CodeChunk, AnalysisResult, An
 from app.services.repo_analyzer import RepositoryAnalyzer
 from app.services.code_parser import CodeParser
 from app.services.graph_builder import DependencyGraph
-from app.services.embedding_service import EmbeddingService, CodeChunker
 from app.services import ai_service
 from app.core.config import settings
 
@@ -36,7 +36,10 @@ async def run_analysis_pipeline(
 ) -> None:
     """
     Full async analysis pipeline. Runs as a background task.
-    Updates progress in the progress tracker.
+
+    Phase 1: Clone + Scan
+    Phase 2: Parse files + Build graph + Save symbols to DB
+    Phase 3: AI Analysis (summary, architecture, workflows, docs)
     """
 
     def update_progress(step: str, percent: int):
@@ -48,7 +51,7 @@ async def run_analysis_pipeline(
 
     db = AsyncSessionLocal()
     try:
-        # ── Step 1: Clone Repository ───────────────────────────────────────────
+        # ── Phase 1: Clone + Scan ──────────────────────────────────────────────
         update_progress("Cloning repository...", 5)
         await _update_project_status(db, project_id, AnalysisStatus.CLONING)
 
@@ -58,12 +61,10 @@ async def run_analysis_pipeline(
         )
         commit_hash = analyzer.get_commit_hash(local_path)
 
-        # Parse owner/repo from URL
         url_parts = github_url.rstrip("/").split("/")
         owner = url_parts[-2] if len(url_parts) >= 2 else "unknown"
         repo_name = url_parts[-1].replace(".git", "") if url_parts else "unknown"
 
-        # ── Step 2: Scan Directory ────────────────────────────────────────────
         update_progress("Scanning repository structure...", 15)
         await _update_project_status(db, project_id, AnalysisStatus.ANALYZING)
 
@@ -90,15 +91,13 @@ async def run_analysis_pipeline(
         db.add(repo)
         await db.flush()
 
-        # ── Step 3: Parse Code ─────────────────────────────────────────────────
-        update_progress("Parsing code files...", 30)
+        # ── Phase 2: Parse + Graph + Save Symbols ──────────────────────────────
+        update_progress("Parsing codebase & building graph...", 30)
 
         code_parser = CodeParser()
-        parsed_files = []
-        all_symbols = []
+        graph_builder = DependencyGraph()
         symbols_by_type: Dict[str, list] = {}
 
-        # Parse most important files (limit for performance)
         source_files = [
             f for f in scan_result["files"]
             if f["language"] in ("Python", "JavaScript", "TypeScript",
@@ -106,91 +105,79 @@ async def run_analysis_pipeline(
             and f["size_bytes"] < 100_000
         ][:200]
 
-        for file_info in source_files:
-            # Yield control to prevent CPU lockout
+        logger.info(f"Phase 2: Parsing {len(source_files)} files")
+
+        chunk_count = 0
+
+        for i, file_info in enumerate(source_files):
             await asyncio.sleep(0.01)
-            
-            content = analyzer.read_file(local_path, file_info["path"])
+
+            file_path = file_info["path"]
+            content = analyzer.read_file(local_path, file_path)
             if not content:
                 continue
 
+            # Parse
             parsed = code_parser.parse_file(
-                content, file_info["path"], file_info["language"]
+                content, file_path, file_info["language"]
             )
-            parsed["file_path"] = file_info["path"]
-            parsed_files.append(parsed)
+            parsed["file_path"] = file_path
 
+            # Add to graph
+            graph_builder.add_parsed_file(parsed)
+
+            # Collect symbols for AI analysis (capped at 50 per type)
             for symbol in parsed.get("symbols", []):
-                all_symbols.append(symbol)
                 stype = symbol.get("type", "unknown")
                 if stype not in symbols_by_type:
                     symbols_by_type[stype] = []
-                symbols_by_type[stype].append(symbol)
+                if len(symbols_by_type[stype]) < 50:
+                    symbols_by_type[stype].append(symbol)
 
-        # ── Step 4: Build Dependency Graph ────────────────────────────────────
-        update_progress("Building dependency graph...", 45)
+            # Save symbols to CodeChunk table (lightweight, no API calls)
+            for symbol in parsed.get("symbols", []):
+                symbol_content = symbol.get("content", "")
+                if isinstance(symbol_content, list):
+                    symbol_content = "\n".join(symbol_content)
+                if not isinstance(symbol_content, str):
+                    symbol_content = str(symbol_content)
+                if not symbol_content or len(symbol_content.strip()) < 20:
+                    continue
 
-        graph_builder = DependencyGraph()
-        graph_data = graph_builder.build_from_analysis(parsed_files)
+                db.add(CodeChunk(
+                    repository_id=repo.id,
+                    file_path=file_path,
+                    content=symbol_content[:5000],
+                    chunk_index=chunk_count,
+                    language=file_info.get("language"),
+                    chunk_type=symbol.get("type", "unknown"),
+                    symbol_name=symbol.get("name", ""),
+                    start_line=symbol.get("start_line", 0),
+                    end_line=symbol.get("end_line", 0),
+                    embedding_id=None,
+                ))
+                chunk_count += 1
 
-        # ── Step 5: Generate Embeddings ───────────────────────────────────────
-        update_progress("Generating embeddings...", 55)
-        await _update_project_status(db, project_id, AnalysisStatus.EMBEDDING)
-
-        chunker = CodeChunker(settings.CHUNK_SIZE, settings.CHUNK_OVERLAP)
-        embedding_service = EmbeddingService(project_id)
-
-        all_chunks = []
-        for parsed in parsed_files:
-            file_path = parsed.get("file_path", "")
-            symbols = parsed.get("symbols", [])
-
-            if symbols:
-                chunks = chunker.chunk_symbols(symbols, file_path)
-            else:
-                # Fallback to file chunking
-                file_info = next(
-                    (f for f in scan_result["files"] if f["path"] == file_path), None
+            # Flush periodically to keep session light
+            if i % 30 == 0 and i > 0:
+                await db.flush()
+                update_progress(
+                    f"Parsing files ({i}/{len(source_files)})...",
+                    30 + int((i / len(source_files)) * 25)
                 )
-                if file_info:
-                    content = analyzer.read_file(local_path, file_path)
-                    if content:
-                        chunks = chunker.chunk_file(
-                            content, file_path, file_info.get("language", "Unknown")
-                        )
-                    else:
-                        chunks = []
-                else:
-                    chunks = []
 
-            all_chunks.extend(chunks)
+        await db.flush()
+        logger.info(f"Saved {chunk_count} code symbols to DB")
 
-        # Embed all chunks
-        embedded_chunks = await embedding_service.embed_chunks(all_chunks)
+        # Finalize graph
+        graph_data = graph_builder.get_visualization_data()
+        logger.info(f"Graph: {graph_data.get('metrics', {}).get('node_count', 0)} nodes, "
+                     f"{graph_data.get('metrics', {}).get('edge_count', 0)} edges")
 
-        # Save code chunks to DB
-        for i, chunk in enumerate(embedded_chunks[:5000]):  # Limit DB inserts
-            # Yield every 10 inserts to keep event loop responsive
-            if i % 10 == 0:
-                await asyncio.sleep(0.01)
-                
-            db.add(CodeChunk(
-                repository_id=repo.id,
-                file_path=chunk.get("file_path", ""),
-                content=chunk.get("content", "")[:5000],
-                chunk_index=int(chunk.get("chunk_index", 0)),
-                language=None,
-                chunk_type=chunk.get("chunk_type", "file"),
-                symbol_name=chunk.get("symbol_name"),
-                start_line=chunk.get("start_line", 0),
-                end_line=chunk.get("end_line", 0),
-                embedding_id=chunk.get("embedding_id"),
-            ))
+        # ── Phase 3: AI Analysis + Save ────────────────────────────────────────
+        update_progress("Generating AI analysis...", 60)
 
-        # ── Step 6: AI Analysis ────────────────────────────────────────────────
-        update_progress("Generating AI analysis...", 70)
-
-        # Generate project summary
+        # Summary
         try:
             summary = await ai_service.generate_project_summary(
                 repo_metadata={"owner": owner, "repo_name": repo_name,
@@ -199,8 +186,6 @@ async def run_analysis_pipeline(
                 languages=scan_result["languages"],
                 frameworks=scan_result["frameworks"],
             )
-
-            # Save summary
             db.add(AnalysisResult(
                 project_id=uuid.UUID(project_id),
                 result_type="summary",
@@ -212,9 +197,9 @@ async def run_analysis_pipeline(
             logger.error(f"Summary generation failed: {e}")
             summary = {"project_name": repo_name, "description": "Analysis partially failed."}
 
-        update_progress("Analyzing architecture...", 80)
+        update_progress("Analyzing architecture...", 72)
 
-        # Generate architecture explanation
+        # Architecture (includes graph)
         try:
             architecture = await ai_service.generate_architecture_explanation(
                 summary=summary,
@@ -222,7 +207,6 @@ async def run_analysis_pipeline(
                 symbols_by_type=symbols_by_type,
                 key_files=key_files,
             )
-
             db.add(AnalysisResult(
                 project_id=uuid.UUID(project_id),
                 result_type="architecture",
@@ -231,18 +215,23 @@ async def run_analysis_pipeline(
             await db.flush()
         except Exception as e:
             logger.error(f"Architecture analysis failed: {e}")
+            db.add(AnalysisResult(
+                project_id=uuid.UUID(project_id),
+                result_type="architecture",
+                content={"graph": graph_data},
+            ))
+            await db.flush()
             architecture = {}
 
-        update_progress("Detecting workflows...", 88)
+        update_progress("Detecting workflows...", 82)
 
-        # Detect workflows
+        # Workflows
         try:
             workflows = await ai_service.detect_workflows(
                 routes=symbols_by_type.get("route", []),
                 symbols_by_type=symbols_by_type,
                 key_files=key_files,
             )
-
             db.add(AnalysisResult(
                 project_id=uuid.UUID(project_id),
                 result_type="workflows",
@@ -251,19 +240,17 @@ async def run_analysis_pipeline(
             await db.flush()
         except Exception as e:
             logger.error(f"Workflow detection failed: {e}")
-            workflows = []
 
-        update_progress("Generating documentation...", 94)
+        update_progress("Generating documentation...", 90)
 
-        # Generate onboarding docs
+        # Docs
         try:
             docs = await ai_service.generate_onboarding_docs(
                 summary=summary,
                 architecture=architecture,
-                workflows=workflows,
+                workflows=workflows if 'workflows' in dir() else [],
                 repo_metadata={"owner": owner, "repo_name": repo_name},
             )
-
             db.add(AnalysisResult(
                 project_id=uuid.UUID(project_id),
                 result_type="documentation",
@@ -272,7 +259,7 @@ async def run_analysis_pipeline(
         except Exception as e:
             logger.error(f"Documentation generation failed: {e}")
 
-        # ── Step 7: Complete ──────────────────────────────────────────────────
+        # ── Complete ───────────────────────────────────────────────────────────
         await db.commit()
         await _update_project_status(db, project_id, AnalysisStatus.COMPLETE)
 
@@ -281,7 +268,6 @@ async def run_analysis_pipeline(
             "current_step": "Analysis complete!",
             "progress_percent": 100,
         }
-
         logger.info(f"✅ Analysis complete for project {project_id}")
 
     except Exception as e:

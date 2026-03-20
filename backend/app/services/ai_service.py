@@ -370,6 +370,75 @@ Instructions:
     }
 
 
+# ─── LLM-Powered File Selection (replaces FAISS) ──────────────────────────────
+
+async def select_relevant_files(
+    question: str,
+    symbols: List[Dict],
+    max_files: int = 8,
+) -> List[str]:
+    """
+    Use GPT to pick the most relevant files for a user question.
+    Sends the symbol index (file paths + function/class names) and
+    asks the LLM to select which files are most likely to answer the question.
+    """
+    # Build a compact symbol index: file_path -> [symbol_name (type)]
+    file_index: Dict[str, List[str]] = {}
+    for sym in symbols:
+        fp = sym.get("file_path", "")
+        name = sym.get("symbol_name") or sym.get("name", "")
+        stype = sym.get("chunk_type") or sym.get("type", "")
+        if fp:
+            if fp not in file_index:
+                file_index[fp] = []
+            if name:
+                file_index[fp].append(f"{name} ({stype})")
+
+    if not file_index:
+        return []
+
+    # Format as compact text
+    index_text = "\n".join(
+        f"- {fp}: {', '.join(syms[:10])}"
+        for fp, syms in sorted(file_index.items())
+    )
+
+    # Truncate if too long (stay well within context limits)
+    if len(index_text) > 12000:
+        index_text = index_text[:12000] + "\n... (truncated)"
+
+    prompt = f"""Given this developer question about a codebase, select the {max_files} most relevant files from the index below.
+
+Question: {question}
+
+File index (file_path: symbols):
+{index_text}
+
+Return a JSON object with:
+{{
+    "files": ["path/to/file1.py", "path/to/file2.ts", ...]
+}}
+
+Only include files that are likely relevant to answering the question. Return at most {max_files} files."""
+
+    try:
+        response = await client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "You are a code search assistant. Given a question and a file index, select the most relevant files. Return only valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            response_format={"type": "json_object"},
+            max_tokens=500,
+        )
+        result = json.loads(response.choices[0].message.content)
+        return result.get("files", [])[:max_files]
+    except Exception as e:
+        logger.error(f"File selection failed: {e}")
+        return []
+
+
 async def explain_code(
     file_path: str,
     code_content: str,
