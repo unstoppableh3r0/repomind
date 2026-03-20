@@ -121,17 +121,21 @@ export default function DashboardPage() {
     <div className="p-8 max-w-5xl">
 
       {/* Header */}
-      <div className="mb-8 animate-fade-in">
+      <div className="mb-10 animate-fade-in">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-0.5 w-8 bg-gradient-to-r from-[#7c6fff] to-transparent rounded-full" />
+          <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#4a4b60]">Repository Overview</span>
+        </div>
         <h1
-          className="text-2xl font-bold mb-1"
-          style={{ letterSpacing: '-0.02em', color: '#f0f0f5' }}
+          className="text-5xl font-black mb-3"
+          style={{ letterSpacing: '-0.04em', color: '#f0f0f5', lineHeight: 1 }}
         >
-          Project Overview
+          {structure?.repo_name || 'Analysis Results'}
         </h1>
-        <p className="text-sm" style={{ color: '#5a5b70' }}>
+        <p className="text-base font-medium" style={{ color: '#8b8c9e' }}>
           {structure
-            ? `${structure.owner}/${structure.repo_name} · branch: ${structure.branch}`
-            : 'Analysis in progress…'}
+            ? `${structure.owner} / ${structure.repo_name}`
+            : 'Unlocking your codebase intelligence...'}
         </p>
       </div>
 
@@ -205,42 +209,51 @@ export default function DashboardPage() {
 
       {/* Stat cards */}
       {structure && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {statCards.map((stat, i) => (
             <div
               key={stat.label}
-              className="p-4 rounded-2xl transition-all duration-200 group cursor-default"
+              className="p-5 rounded-3xl transition-all duration-300 group cursor-default relative overflow-hidden"
               style={{
-                background: 'rgba(255,255,255,0.025)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                animation: `fade-up 0.5s ease-out ${i * 0.07}s both`,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                animation: `fade-up 0.5s ease-out ${i * 0.1}s both`,
+                backdropFilter: 'blur(10px)',
               }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement
-                el.style.background = `${stat.color}0d`
-                el.style.borderColor = `${stat.color}30`
+                el.style.background = 'rgba(255,255,255,0.05)'
+                el.style.borderColor = `${stat.color}40`
+                el.style.transform = 'translateY(-4px)'
+                el.style.boxShadow = `0 12px 24px -8px ${stat.color}20`
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement
-                el.style.background = 'rgba(255,255,255,0.025)'
-                el.style.borderColor = 'rgba(255,255,255,0.07)'
+                el.style.background = 'rgba(255,255,255,0.03)'
+                el.style.borderColor = 'rgba(255,255,255,0.08)'
+                el.style.transform = 'translateY(0)'
+                el.style.boxShadow = 'none'
               }}
             >
-              <div className="flex items-center gap-2 mb-3">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${stat.color}18` }}
-                >
-                  <stat.icon className="w-3.5 h-3.5" style={{ color: stat.color }} />
+              <div className="relative z-10">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div
+                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${stat.color}15`, border: `1px solid ${stat.color}20` }}
+                  >
+                    <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
+                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: '#4a4b60' }}>{stat.label}</span>
                 </div>
-                <span className="text-xs font-medium" style={{ color: '#4a4b60' }}>{stat.label}</span>
+                <div
+                  className="text-3xl font-black tracking-tighter"
+                  style={{ fontVariantNumeric: 'tabular-nums', color: '#ffffff', letterSpacing: '-0.02em' }}
+                >
+                  {stat.value}
+                </div>
               </div>
-              <div
-                className="text-2xl font-bold tracking-tight"
-                style={{ fontVariantNumeric: 'tabular-nums', color: '#e8e8f0', letterSpacing: '-0.02em' }}
-              >
-                {stat.value}
-              </div>
+              {/* Subtle glow */}
+              <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', width: '60px', height: '60px', background: stat.color, filter: 'blur(40px)', opacity: 0.1 }} />
             </div>
           ))}
         </div>

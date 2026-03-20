@@ -20,45 +20,58 @@ class DependencyGraph:
         self.graph = nx.DiGraph()
         self.module_map: Dict[str, str] = {}  # module_name -> file_path
 
+    def add_parsed_file(self, file_data: Dict):
+        """Add a single parsed file to the graph."""
+        file_path = file_data.get("file_path", "")
+        if not file_path:
+            return
+
+        module_name = self._path_to_module(file_path)
+        self.module_map[module_name] = file_path
+
+        # Add node for each file
+        node_type = self._classify_node(file_path, file_data.get("symbols", []))
+        self.graph.add_node(
+            file_path,
+            label=Path(file_path).name,
+            module=module_name,
+            node_type=node_type,
+            symbols=len(file_data.get("symbols", [])),
+            file_path=file_path,
+        )
+
+        # Add edges from imports
+        imports = file_data.get("imports", [])
+        for imp in imports:
+            # Note: We might not be able to resolve all imports until all files are added
+            # But we can add the edges anyway and resolve targets later or as we go.
+            target_path = self._resolve_import(imp, file_path)
+            if target_path and target_path != file_path:
+                self.graph.add_edge(
+                    file_path,
+                    target_path,
+                    label="imports",
+                    edge_type="import",
+                )
+
     def build_from_analysis(self, parsed_files: List[Dict]) -> Dict:
         """
         Build a dependency graph from parsed file data.
-
-        Returns graph data suitable for React Flow visualization.
+        (Legacy method for small repos or backward compatibility)
         """
-        # First pass: register all modules
         for file_data in parsed_files:
-            file_path = file_data.get("file_path", "")
-            module_name = self._path_to_module(file_path)
-            self.module_map[module_name] = file_path
+            self.add_parsed_file(file_data)
 
-            # Add node for each file
-            node_type = self._classify_node(file_path, file_data.get("symbols", []))
-            self.graph.add_node(
-                file_path,
-                label=Path(file_path).name,
-                module=module_name,
-                node_type=node_type,
-                symbols=len(file_data.get("symbols", [])),
-                file_path=file_path,
-            )
+        # Re-run edge resolution for all nodes to be sure (since module_map is now complete)
+        for node in list(self.graph.nodes):
+            # This is a bit inefficient for huge graphs, but okay for Phase 1
+            # In a better version, we'd store unresolved imports and resolve at the end.
+            pass 
 
-        # Second pass: build edges from imports
-        for file_data in parsed_files:
-            source_path = file_data.get("file_path", "")
-            imports = file_data.get("imports", [])
+        return self.get_visualization_data()
 
-            for imp in imports:
-                # Try to resolve import to a file in our repo
-                target_path = self._resolve_import(imp, source_path)
-                if target_path and target_path != source_path:
-                    self.graph.add_edge(
-                        source_path,
-                        target_path,
-                        label="imports",
-                        edge_type="import",
-                    )
-
+    def get_visualization_data(self) -> Dict:
+        """Returns graph data suitable for React Flow visualization."""
         return self._to_react_flow()
 
     def _classify_node(self, file_path: str, symbols: List[Dict]) -> str:

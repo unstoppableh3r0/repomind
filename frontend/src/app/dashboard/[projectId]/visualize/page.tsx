@@ -130,19 +130,41 @@ export default function VisualizePage() {
   }
 
   return (
-    <div className="flex h-full">
-      {/* Graph */}
-      <div className="flex-1" style={{ height: 'calc(100vh - 0px)' }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          onNodeClick={(_, node) => setSelectedNode(node)}
-          fitView
-          fitViewOptions={{ padding: 0.25 }}
-        >
+    <div className="flex flex-col h-full relative z-10" style={{ height: 'calc(100vh - 0px)' }}>
+      {/* ── Header / Breadcrumbs ── */}
+      <header 
+        className="px-6 py-4 flex items-center justify-between"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,8,16,0.4)', backdropFilter: 'blur(10px)' }}
+      >
+        <div className="flex items-center gap-2 text-xs font-medium">
+          <span style={{ color: '#4a4b60' }}>Dashboard</span>
+          <span style={{ color: '#2a2b3d' }}>/</span>
+          <span style={{ color: '#4a4b60' }}>{projectId.slice(0, 8)}...</span>
+          <span style={{ color: '#2a2b3d' }}>/</span>
+          <span style={{ color: '#e0e0ea' }}>Architecture Visualization</span>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+            <GitBranch className="w-3.5 h-3.5" style={{ color: '#7c6fff' }} />
+            <span className="text-[11px] font-semibold" style={{ color: '#c0c0d0' }}>Interactive Graph</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Graph */}
+        <div className="flex-1 h-full">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            onNodeClick={(_, node) => setSelectedNode(node)}
+            fitView
+            fitViewOptions={{ padding: 0.25 }}
+          >
           <Background
             variant={BackgroundVariant.Dots}
             gap={24}
@@ -306,5 +328,6 @@ export default function VisualizePage() {
         </div>
       )}
     </div>
-  )
+  </div>
+)
 }

@@ -34,18 +34,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const repoInitial = repoName.split('/').pop()?.[0]?.toUpperCase() || 'R'
 
   return (
-    <div className="min-h-screen" style={{ display: 'flex', background: '#080810', color: '#f0f0f5' }}>
+    <div className="min-h-screen" style={{ display: 'flex', background: '#080810', color: '#f0f0f5', position: 'relative', overflow: 'hidden' }}>
+      
+      {/* ── Background Grid ── */}
+      <div style={{ position: 'absolute', inset: 0, opacity: 0.05, pointerEvents: 'none', backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '600px', background: 'radial-gradient(circle at 50% 0%, rgba(124,111,255,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       {/* ── Sidebar ── */}
       <aside
-        className="w-60 flex-shrink-0"
+        className="w-64 flex-shrink-0 z-10"
         style={{
           display: 'flex',
           flexDirection: 'column',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'rgba(8,8,16,0.6)',
           borderRight: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          backdropFilter: 'blur(32px)',
+          WebkitBackdropFilter: 'blur(32px)',
         }}
       >
         {/* Logo */}
