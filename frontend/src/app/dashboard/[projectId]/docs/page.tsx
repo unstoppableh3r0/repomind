@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2, BookOpen, Download, Copy, Check } from 'lucide-react'
-import { getDocumentation } from '@/lib/api'
-import { useStore } from '@/lib/store'
+import { Loader2, BookOpen, Download, Copy, Check, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { cn } from '@/lib/utils'
+import { getDocumentation } from '@/lib/api'
+import { useStore } from '@/lib/store'
 import type { Documentation } from '@/lib/api'
 
 const TABS = [
@@ -31,12 +30,15 @@ export default function DocsPage() {
     const load = async () => {
       try {
         const cached = storeDocs[projectId]
-        if (cached) { setLocalDocs(cached); setLoading(false); return }
+        if (cached) {
+          setLocalDocs(cached)
+          return
+        }
         const data = await getDocumentation(projectId)
         setDocs(projectId, data)
         setLocalDocs(data)
-      } catch (err) {
-        console.error('Failed to load docs:', err)
+      } catch {
+        setLocalDocs(null)
       } finally {
         setLoading(false)
       }
@@ -44,16 +46,24 @@ export default function DocsPage() {
     load()
   }, [projectId, storeDocs, setDocs])
 
+  function activeContent(): string {
+    if (!docs) return ''
+    if (activeTab === 'onboarding') return docs.onboarding_guide || ''
+    if (activeTab === 'architecture') return docs.architecture_overview || ''
+    if (activeTab === 'setup') return docs.setup_instructions || ''
+    return conceptsToMarkdown(docs)
+  }
+
   async function copyContent() {
-    const content = getActiveContent()
+    const content = activeContent()
     if (!content) return
     await navigator.clipboard.writeText(content)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => setCopied(false), 1600)
   }
 
-  function downloadMarkdown() {
-    const content = getActiveContent()
+  function downloadContent() {
+    const content = activeContent()
     if (!content) return
     const blob = new Blob([content], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
@@ -64,275 +74,157 @@ export default function DocsPage() {
     URL.revokeObjectURL(url)
   }
 
-  function getActiveContent(): string {
-    if (!docs) return ''
-    switch (activeTab) {
-      case 'onboarding': return docs.onboarding_guide || ''
-      case 'architecture': return docs.architecture_overview || ''
-      case 'setup': return docs.setup_instructions || ''
-      case 'concepts': return formatConceptsAsMarkdown(docs)
-      default: return ''
-    }
-  }
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div
-          className="w-7 h-7 rounded-full border-2 animate-spin"
-          style={{ borderColor: 'rgba(124,111,255,0.3)', borderTopColor: '#7c6fff' }}
-        />
+      <div className="h-full w-full grid place-items-center">
+        <Loader2 className="w-7 h-7 animate-spin text-[#9a8eff]" />
       </div>
     )
   }
 
   if (!docs) {
     return (
-      <div className="p-8 text-center">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <BookOpen className="w-8 h-8" style={{ color: '#3d3e52' }} />
+      <div className="h-full w-full grid place-items-center p-8 text-center">
+        <div>
+          <div className="w-16 h-16 mx-auto rounded-2xl grid place-items-center border border-white/10 bg-white/5 mb-4">
+            <BookOpen className="w-7 h-7 text-[#6d6d84]" />
+          </div>
+          <h2 className="text-lg font-semibold text-[#ececf8] mb-1">Documentation unavailable</h2>
+          <p className="text-sm text-[#7d7d93]">Ensure analysis finished and try again.</p>
         </div>
-        <h2 className="font-semibold text-lg mb-2" style={{ color: '#e0e0ea' }}>Documentation not available</h2>
-        <p className="text-sm" style={{ color: '#4a4b60' }}>Ensure the repository analysis has completed.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <div
-        className="flex-shrink-0 px-6 py-4"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-      >
-        <div className="flex items-center justify-between mb-4">
+    <div className="h-full w-full grid" style={{ gridTemplateRows: 'auto minmax(0,1fr)' }}>
+      <header className="px-6 py-4 border-b border-white/10">
+        <div className="rm-page-badge mb-3">
+          <Sparkles className="w-3 h-3" />
+          Analysis Docs
+        </div>
+
+        <div className="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#e8e8f0', letterSpacing: '-0.02em' }}>Documentation</h1>
-            <p className="text-xs" style={{ color: '#4a4b60' }}>Auto-generated developer documentation</p>
+            <h1 className="text-xl font-bold text-[#ececf8] tracking-tight">Documentation</h1>
+            <p className="text-xs text-[#777792]">Generated developer guides and onboarding docs</p>
           </div>
           <div className="flex items-center gap-2">
-            {[
-              { icon: copied ? Check : Copy, label: copied ? 'Copied' : 'Copy', onClick: copyContent, active: copied },
-              { icon: Download, label: 'Download', onClick: downloadMarkdown, active: false },
-            ].map(btn => (
-              <button
-                key={btn.label}
-                onClick={btn.onClick}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150"
-                style={{
-                  background: btn.active ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
-                  border: btn.active ? '1px solid rgba(52,211,153,0.25)' : '1px solid rgba(255,255,255,0.08)',
-                  color: btn.active ? '#34d399' : '#6b6c80',
-                }}
-                onMouseEnter={e => { if (!btn.active) (e.currentTarget as HTMLElement).style.color = '#c0c0d0' }}
-                onMouseLeave={e => { if (!btn.active) (e.currentTarget as HTMLElement).style.color = '#6b6c80' }}
-              >
-                <btn.icon className="w-3.5 h-3.5" />
-                {btn.label}
-              </button>
-            ))}
+            <button
+              onClick={copyContent}
+              className="rounded-lg px-3 py-1.5 text-xs border transition-colors"
+              style={{
+                borderColor: copied ? 'rgba(52,211,153,.4)' : 'rgba(255,255,255,.14)',
+                background: copied ? 'rgba(52,211,153,.14)' : 'rgba(255,255,255,.05)',
+                color: copied ? '#34d399' : '#b2b2c6',
+              }}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? 'Copied' : 'Copy'}
+              </span>
+            </button>
+            <button
+              onClick={downloadContent}
+              className="rounded-lg px-3 py-1.5 text-xs border border-white/15 bg-white/5 text-[#b2b2c6] hover:border-white/25"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div
-          className="flex gap-0.5 p-1 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', width: 'fit-content' }}
-        >
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
-              style={
-                activeTab === tab.id
-                  ? {
-                    background: 'rgba(124,111,255,0.15)',
-                    color: '#c4b5fd',
-                    border: '1px solid rgba(124,111,255,0.25)',
-                  }
-                  : {
-                    background: 'transparent',
-                    color: '#5a5b70',
-                    border: '1px solid transparent',
-                  }
-              }
-              onMouseEnter={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = '#b0b0c0' }}
-              onMouseLeave={e => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = '#5a5b70' }}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="inline-flex p-1 rounded-xl border border-white/10 bg-white/5 gap-1">
+          {TABS.map((tab) => {
+            const active = tab.id === activeTab
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="px-3.5 py-1.5 rounded-lg text-xs border transition-colors"
+                style={{
+                  borderColor: active ? 'rgba(124,111,255,.35)' : 'transparent',
+                  background: active ? 'rgba(124,111,255,.16)' : 'transparent',
+                  color: active ? '#cbbfff' : '#8a8aa1',
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
-      </div>
+      </header>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-3xl">
+      <section className="min-h-0 overflow-y-auto px-6 py-6">
+        <article className="rm-glass-panel p-5 max-w-4xl">
           {activeTab === 'concepts' ? (
-            <ConceptsTab docs={docs} />
+            <ConceptsBlock docs={docs} />
           ) : (
-            <MarkdownContent content={getActiveContent()} />
+            <MarkdownBlock content={activeContent()} />
           )}
-        </div>
-      </div>
+        </article>
+      </section>
     </div>
   )
 }
 
-function MarkdownContent({ content }: { content: string }) {
-  if (!content) {
-    return <p className="text-sm" style={{ color: '#4a4b60' }}>No content available.</p>
-  }
+function MarkdownBlock({ content }: { content: string }) {
+  if (!content) return <p className="text-sm text-[#7d7d93]">No content available.</p>
 
   return (
     <div className="prose-repomind">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          code({ node, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '')
-            const isBlock = !props.inline
-            if (isBlock && match) {
-              return (
-                <div
-                  className="my-4 rounded-xl overflow-hidden"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-                >
-                  <div
-                    className="flex items-center px-4 py-2"
-                    style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-                  >
-                    <span className="text-xs font-mono" style={{ color: '#5a5b70' }}>{match[1]}</span>
-                  </div>
-                  <pre
-                    className="!m-0 !p-4 overflow-x-auto text-sm"
-                    style={{ background: 'rgba(0,0,0,0.35)' }}
-                  >
-                    <code style={{ color: '#c0c0d0', fontFamily: 'monospace' }}>
-                      {String(children).replace(/\n$/, '')}
-                    </code>
-                  </pre>
-                </div>
-              )
-            }
-            return (
-              <code
-                className="px-1.5 py-0.5 rounded text-sm font-mono"
-                style={{ background: 'rgba(124,111,255,0.12)', color: '#c4b5fd', border: '1px solid rgba(124,111,255,0.18)' }}
-                {...props}
-              >
-                {children}
-              </code>
-            )
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
     </div>
   )
 }
 
-function ConceptsTab({ docs }: { docs: Documentation }) {
+function ConceptsBlock({ docs }: { docs: Documentation }) {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8">
       {docs.key_concepts && docs.key_concepts.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3" style={{ color: '#e0e0ea' }}>Key Concepts</h2>
+        <section>
+          <h2 className="text-base font-semibold text-[#ececf8] mb-3">Key Concepts</h2>
           <div className="space-y-2">
-            {docs.key_concepts.map((concept, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <div
-                  className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-                  style={{ background: '#7c6fff' }}
-                />
-                <p className="text-sm leading-relaxed" style={{ color: '#a0a0b0' }}>{concept}</p>
+            {docs.key_concepts.map((concept, index) => (
+              <div key={index} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#b8b8c9]">
+                {concept}
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {docs.common_gotchas && docs.common_gotchas.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3" style={{ color: '#fbbf24' }}>⚠ Common Gotchas</h2>
+        <section>
+          <h2 className="text-base font-semibold text-[#f5c66d] mb-3">Common Gotchas</h2>
           <div className="space-y-2">
-            {docs.common_gotchas.map((gotcha, i) => (
-              <div
-                key={i}
-                className="p-3.5 rounded-xl"
-                style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.15)' }}
-              >
-                <p className="text-sm leading-relaxed" style={{ color: '#b0b0c0' }}>{gotcha}</p>
+            {docs.common_gotchas.map((gotcha, index) => (
+              <div key={index} className="rounded-xl border border-[#f59e0b]/25 bg-[#f59e0b]/10 px-4 py-3 text-sm text-[#e8d3a8]">
+                {gotcha}
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {docs.first_week_tasks && docs.first_week_tasks.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3" style={{ color: '#e0e0ea' }}>First Week Tasks</h2>
-          <div className="space-y-2">
-            {docs.first_week_tasks.map((task, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 p-3.5 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <span
-                  className="text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-semibold"
-                  style={{ background: 'rgba(124,111,255,0.15)', color: '#a78bfa', border: '1px solid rgba(124,111,255,0.25)' }}
-                >
-                  {i + 1}
-                </span>
-                <p className="text-sm leading-relaxed" style={{ color: '#a0a0b0' }}>{task}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {docs.glossary && Object.keys(docs.glossary).length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3" style={{ color: '#e0e0ea' }}>Glossary</h2>
-          <div className="space-y-2">
-            {Object.entries(docs.glossary).map(([term, def]) => (
-              <div
-                key={term}
-                className="p-3.5 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <span className="text-xs font-mono font-medium" style={{ color: '#a78bfa' }}>{term}</span>
-                <p className="text-sm mt-1 leading-relaxed" style={{ color: '#6b6c80' }}>{def}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        </section>
       )}
     </div>
   )
 }
 
-function formatConceptsAsMarkdown(docs: Documentation): string {
-  let md = ''
-  if (docs.key_concepts?.length) {
-    md += '## Key Concepts\n\n'
-    docs.key_concepts.forEach(c => { md += `- ${c}\n` })
-    md += '\n'
-  }
-  if (docs.common_gotchas?.length) {
-    md += '## Common Gotchas\n\n'
-    docs.common_gotchas.forEach(c => { md += `- ${c}\n` })
-    md += '\n'
-  }
-  return md
+function conceptsToMarkdown(docs: Documentation): string {
+  const concepts = docs.key_concepts || []
+  const gotchas = docs.common_gotchas || []
+  const firstWeek = docs.first_week_tasks || []
+
+  return [
+    '# Key Concepts',
+    ...concepts.map((c) => `- ${c}`),
+    '',
+    '# First Week Tasks',
+    ...firstWeek.map((t) => `- ${t}`),
+    '',
+    '# Common Gotchas',
+    ...gotchas.map((g) => `- ${g}`),
+  ].join('\n')
 }

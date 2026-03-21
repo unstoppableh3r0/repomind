@@ -1,14 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter, usePathname } from 'next/navigation'
+import { useEffect } from 'react'
+import { useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
-  LayoutDashboard, GitBranch, Workflow, MessageSquare,
-  BookOpen, Code2, ChevronLeft, Layers, ExternalLink
+  LayoutDashboard,
+  GitBranch,
+  Workflow,
+  MessageSquare,
+  BookOpen,
+  ChevronLeft,
+  Layers,
+  ExternalLink,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Overview', href: '' },
@@ -21,7 +26,6 @@ const NAV_ITEMS = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams()
   const pathname = usePathname()
-  const router = useRouter()
   const projectId = params.projectId as string
   const { projects, setCurrentProject } = useStore()
 
@@ -29,63 +33,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setCurrentProject(projectId)
   }, [projectId, setCurrentProject])
 
-  const project = projects.find(p => p.id === projectId)
+  const project = projects.find((p) => p.id === projectId)
   const repoName = project?.github_url.split('/').slice(-2).join('/') || 'Repository'
   const repoInitial = repoName.split('/').pop()?.[0]?.toUpperCase() || 'R'
 
   return (
-    <div className="min-h-screen" style={{ display: 'flex', background: '#080810', color: '#f0f0f5', position: 'relative', overflow: 'hidden' }}>
-      
-      {/* ── Background Grid ── */}
-      <div style={{ position: 'absolute', inset: 0, opacity: 0.05, pointerEvents: 'none', backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '600px', background: 'radial-gradient(circle at 50% 0%, rgba(124,111,255,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-      {/* ── Sidebar ── */}
+    <div
+      style={{
+        height: '100dvh',
+        width: '100%',
+        display: 'flex',
+        background: '#080810',
+        color: '#f0f0f5',
+        overflow: 'hidden',
+      }}
+    >
       <aside
-        className="w-64 flex-shrink-0 z-10"
         style={{
+          width: '256px',
+          height: '100%',
+          flexShrink: 0,
+          borderRight: '1px solid rgba(255,255,255,0.10)',
+          background: 'rgba(11,11,21,0.85)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
           display: 'flex',
           flexDirection: 'column',
-          background: 'rgba(8,8,16,0.6)',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(32px)',
-          WebkitBackdropFilter: 'blur(32px)',
         }}
       >
-        {/* Logo */}
-        <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" className="flex items-center gap-2.5 mb-5 group">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
-              style={{
-                background: 'linear-gradient(135deg, #7c6fff 0%, #a78bfa 100%)',
-                boxShadow: '0 0 12px rgba(124,111,255,0.35)',
-              }}
-            >
+        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ width: '28px', height: '28px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#7c6fff,#a78bfa)', boxShadow: '0 0 16px rgba(124,111,255,.35)' }}>
               <Layers className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-sm" style={{ letterSpacing: '-0.01em' }}>RepoMind</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '-0.01em' }}>RepoMind</span>
           </Link>
 
-          {/* Project info card */}
-          <div
-            className="rounded-xl p-3 rm-card"
-            data-interactive="true"
-          >
-            <div className="flex items-center gap-2.5 mb-2">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                style={{ background: 'linear-gradient(135deg, #7c6fff22 0%, #a78bfa22 100%)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)' }}
-              >
+          <div className="rm-card" data-interactive="true" style={{ borderRadius: '12px', padding: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#a78bfa', border: '1px solid rgba(167,139,250,.35)', background: 'rgba(124,111,255,.10)' }}>
                 {repoInitial}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate" style={{ color: '#c0c0d0', letterSpacing: '-0.01em' }}>
-                  {repoName.split('/').pop()}
-                </p>
-                <p className="text-[10px] truncate" style={{ color: '#4a4b60' }}>
-                  {repoName.split('/')[0]}
-                </p>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ margin: 0, fontSize: '12px', fontWeight: 500, color: '#c9c9d8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{repoName.split('/').pop()}</p>
+                <p style={{ margin: 0, marginTop: '2px', fontSize: '10px', color: '#5c5c74', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{repoName.split('/')[0]}</p>
               </div>
             </div>
             {project?.github_url && (
@@ -93,10 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={project.github_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-[11px] font-medium transition-colors"
-                style={{ color: '#5a5b70' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#5a5b70')}
+                style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', color: '#7d7d94', textDecoration: 'none' }}
               >
                 <ExternalLink className="w-3 h-3" />
                 View on GitHub
@@ -105,42 +93,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav
-          className="flex-1 px-3 py-4"
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
-        >
-          <p className="px-3 text-[10px] font-medium uppercase tracking-widest mb-3" style={{ color: '#3d3e52' }}>Navigation</p>
-          {NAV_ITEMS.map(item => {
+        <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+          <p style={{ padding: '0 12px', margin: '0 0 12px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#4a4a62' }}>Navigation</p>
+          {NAV_ITEMS.map((item) => {
             const href = `/dashboard/${projectId}${item.href}`
-            const isActive = item.href === ''
-              ? pathname === `/dashboard/${projectId}`
-              : pathname.startsWith(href)
+            const isActive = item.href === '' ? pathname === `/dashboard/${projectId}` : pathname.startsWith(href)
 
             return (
               <Link
                 key={item.label}
                 href={href}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 relative group',
-                )}
                 style={{
-                  background: isActive ? 'rgba(124,111,255,0.12)' : 'transparent',
-                  color: isActive ? '#a78bfa' : '#5a5b70',
-                  border: isActive ? '1px solid rgba(124,111,255,0.2)' : '1px solid transparent',
-                  display: 'flex', // Guarantee flex behavior
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
-                      ; (e.currentTarget as HTMLElement).style.color = '#c0c0d0'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = 'transparent'
-                      ; (e.currentTarget as HTMLElement).style.color = '#5a5b70'
-                  }
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '10px 12px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  textDecoration: 'none',
+                  marginBottom: '4px',
+                  border: isActive ? '1px solid rgba(124,111,255,.35)' : '1px solid transparent',
+                  color: isActive ? '#c8bfff' : '#777792',
+                  background: isActive ? 'rgba(124,111,255,.15)' : 'transparent',
                 }}
               >
                 <item.icon className="w-4 h-4 flex-shrink-0" />
@@ -150,20 +124,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        {/* Back to home */}
-        <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.10)' }}>
           <Link
             href="/"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition-all duration-150"
-            style={{ color: '#3d3e52', display: 'flex' }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'
-                ; (e.currentTarget as HTMLElement).style.color = '#8B8C9E'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'transparent'
-                ; (e.currentTarget as HTMLElement).style.color = '#3d3e52'
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '12px', fontSize: '14px', color: '#777792', textDecoration: 'none' }}
           >
             <ChevronLeft className="w-4 h-4" />
             New analysis
@@ -171,8 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* ── Main content ── */}
-      <main className="flex-1 overflow-auto">
+      <main className="rm-analysis-canvas" style={{ flex: 1, minWidth: 0, height: '100%', position: 'relative', overflow: 'hidden' }}>
         {children}
       </main>
     </div>
