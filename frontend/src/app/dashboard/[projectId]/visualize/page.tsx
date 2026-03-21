@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import ReactFlow, {
   Background, Controls, MiniMap, useNodesState, useEdgesState,
-  BackgroundVariant, Panel, NodeProps
+  BackgroundVariant, Panel, NodeProps, Handle, Position, useReactFlow
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { Loader2, Layers, GitBranch, Database, Settings, Box } from 'lucide-react'
@@ -24,29 +24,30 @@ const NODE_TYPE_ICONS: Record<string, React.ElementType> = {
 
 function CodeNode({ data }: NodeProps) {
   const Icon = NODE_TYPE_ICONS[data.nodeType] || Box
+  console.log('🎨 Rendering CodeNode:', data.label)
   return (
     <div
       className="px-3 py-2 rounded-xl text-xs max-w-[190px] cursor-pointer transition-all duration-200 hover:scale-[1.03]"
       style={{
-        backgroundColor: `${data.color}12`,
-        borderColor: `${data.color}45`,
-        border: `1px solid ${data.color}45`,
-        boxShadow: `0 0 16px ${data.color}18, inset 0 0 0 1px ${data.color}10`,
-        backdropFilter: 'blur(8px)',
+        backgroundColor: data.color || '#a78bfa',
+        border: `2px solid ${data.color || '#a78bfa'}`,
+        color: '#ffffff',
+        boxShadow: `0 0 16px ${data.color}40`,
+        zIndex: 10
       }}
     >
+      <Handle type="target" position={Position.Top} style={{ background: '#7c6fff' }} />
       <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="w-3 h-3 flex-shrink-0" style={{ color: data.color }} />
+        <Icon className="w-3 h-3 flex-shrink-0" style={{ color: '#ffffff' }} />
         <span className="font-medium text-white truncate" style={{ fontSize: '11px' }}>{data.label}</span>
       </div>
       {data.symbolCount > 0 && (
-        <div className="text-[9px] font-mono" style={{ color: `${data.color}80` }}>{data.symbolCount} symbols</div>
+        <div className="text-[9px] font-mono" style={{ color: '#ffffff' }}>{data.symbolCount} symbols</div>
       )}
+      <Handle type="source" position={Position.Bottom} style={{ background: '#7c6fff' }} />
     </div>
   )
 }
-
-
 
 const nodeTypes_display = [
   { type: 'api', label: 'API Routes', color: '#60a5fa' },
@@ -60,6 +61,7 @@ export default function VisualizePage() {
   const params = useParams()
   const projectId = params.projectId as string
   const { architectures, setArchitecture } = useStore()
+  const reactFlowWrapper = useRef<any>(null)
 
   const [arch, setLocalArch] = useState<Architecture | null>(null)
   const [loading, setLoading] = useState(true)
@@ -69,20 +71,43 @@ export default function VisualizePage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
 
   useEffect(() => {
+    console.log('🎨 ReactFlow rendering with', nodes.length, 'nodes and', edges.length, 'edges')
+    if (nodes.length > 0) {
+      console.log('  First node:', { 
+        id: nodes[0].id, 
+        position: nodes[0].position, 
+        width: nodes[0].width, 
+        height: nodes[0].height,
+        type: nodes[0].type
+      })
+      console.log('  All node positions:')
+      nodes.forEach((n, i) => {
+        console.log(`    ${i}: ${n.id} at (${n.position.x}, ${n.position.y})`)
+      })
+    }
+  }, [nodes, edges])
+
+  useEffect(() => {
     const load = async () => {
       try {
-        let data = architectures[projectId]
-        if (!data) {
-          data = await getArchitecture(projectId)
-          setArchitecture(projectId, data)
+        console.log('📊 Loading architecture for project:', projectId)
+        // Always fetch fresh data (ignore cache)
+        const data = await getArchitecture(projectId)
+        console.log('✓ Architecture data received:', data)
+        console.log('  Nodes:', data?.graph?.nodes?.length || 0)
+        console.log('  Edges:', data?.graph?.edges?.length || 0)
+        if (data?.graph?.nodes) {
+          console.log('  First node type:', data.graph.nodes[0]?.type)
         }
+        setArchitecture(projectId, data)
         setLocalArch(data)
         if (data?.graph) {
+          console.log('📍 Setting nodes and edges in ReactFlow')
           setNodes(data.graph.nodes as any[])
           setEdges(data.graph.edges as any[])
         }
       } catch (err) {
-        console.error('Failed to load architecture:', err)
+        console.error('❌ Failed to load architecture:', err)
       } finally {
         setLoading(false)
       }
@@ -107,7 +132,54 @@ export default function VisualizePage() {
     setEdges(filteredEdges as any[])
   }, [arch, setNodes, setEdges])
 
-  const nodeTypes = useMemo(() => ({ codeNode: CodeNode }), [])
+  const nodeTypes = useMemo(() => {
+    console.log('📝 Registering custom node types: codeNode')
+    return { codeNode: CodeNode }
+  }, [])
+
+  // Calculate viewport to show all nodes
+  const [initialViewport, setInitialViewport] = useState({ x: 0, y: 0, zoom: 1 })
+  const graphContainerRef = useRef<HTMLDivElement>(null)
+  
+  useEffect(() => {
+    if (nodes.length > 0 && graphContainerRef.current) {
+      // Get actual canvas dimensions from container
+      const rect = graphContainerRef.current.getBoundingClientRect()
+      const canvasWidth = rect.width || 1200
+      const canvasHeight = rect.height || 600
+      
+      console.log('📐 Container dimensions:', { canvasWidth, canvasHeight })
+      
+      // Calculate bounds (with padding) to fit all nodes
+      const padding = 100
+      const minX = Math.min(...nodes.map(n => n.position?.x || 0)) - padding
+      const maxX = Math.max(...nodes.map(n => n.position?.x || 0)) + (nodes[0]?.width || 190) + padding
+      const minY = Math.min(...nodes.map(n => n.position?.y || 0)) - padding
+      const maxY = Math.max(...nodes.map(n => n.position?.y || 0)) + (nodes[0]?.height || 60) + padding
+      
+      const boundingWidth = maxX - minX
+      const boundingHeight = maxY - minY
+      
+      // Calculate zoom to fit all nodes in canvas with margin
+      const zoom = Math.min(
+        (canvasWidth - 40) / Math.max(boundingWidth, 1),
+        (canvasHeight - 40) / Math.max(boundingHeight, 1),
+        1.5
+      )
+      
+      // Center the viewport on the bounding box
+      const x = (canvasWidth - boundingWidth * zoom) / 2 - minX * zoom
+      const y = (canvasHeight - boundingHeight * zoom) / 2 - minY * zoom
+      
+      console.log('📐 Viewport calculation:')
+      console.log('   Bounds:', { minX, maxX, minY, maxY })
+      console.log('   Bounding box:', { width: boundingWidth, height: boundingHeight })
+      console.log('   Zoom:', zoom)
+      console.log('   Viewport:', { x, y, zoom })
+      
+      setInitialViewport({ x, y, zoom })
+    }
+  }, [nodes])
 
   if (loading) {
     return (
@@ -152,9 +224,9 @@ export default function VisualizePage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative" style={{ height: 'calc(100% - 80px)' }}>
         {/* Graph */}
-        <div className="flex-1 h-full">
+        <div ref={graphContainerRef} className="flex-1 relative" style={{ width: '100%', height: '100%', display: 'block' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -162,8 +234,8 @@ export default function VisualizePage() {
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
             onNodeClick={(_, node) => setSelectedNode(node)}
-            fitView
-            fitViewOptions={{ padding: 0.25 }}
+            defaultViewport={initialViewport}
+            style={{ width: '100%', height: '100%', display: 'block' }}
           >
           <Background
             variant={BackgroundVariant.Dots}
@@ -172,9 +244,6 @@ export default function VisualizePage() {
             color="rgba(255,255,255,0.04)"
           />
           <Controls />
-          <MiniMap
-            nodeColor={n => (n.data as any)?.color || '#7c6fff'}
-          />
 
           {/* Filter Panel */}
           <Panel position="top-left" className="m-4">
